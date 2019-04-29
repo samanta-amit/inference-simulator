@@ -1,1 +1,1 @@
-# inference-simulator
+# Implementation of ML Inference Simulator
