@@ -5,6 +5,8 @@ import heapq
 from enum import Enum
 import random
 from random import randint
+import array as arr
+import numpy as geek 
 
 class EventQueue:
 
@@ -53,10 +55,11 @@ class Priority:
 
 class ClosedLoopWorkload:
 
-	def __init__(self, workload_id, user_id, model_id, request_generator, concurrency, admission_control):
+	def __init__(self, workload_id, worker_id, user_id, model_id, request_generator, concurrency, admission_control):
 		self.workload_id = workload_id
 		self.user_id = user_id
 		self.model_id = model_id
+		self.worker_id = worker_id
 		self.request_generator = request_generator
 		self.random = RandomState(random_seed + workload_id)
 		self.admission_control = admission_control
@@ -95,9 +98,8 @@ class Request:
 
 	def begin(self):
 		self.arrival = now()
-		logEvent("Arrive", "User %d, %s: %s" % (self.workload.user_id, self, self.verbose_description()))
+		logEvent("Arrive", "User %d, %s: Worker %s: Model %s: %s" % (self.workload.user_id, self, self.workload.worker_id, self.workload.model_id, self.verbose_description()))
 		self.admission_control.enqueue(self)
-		#self.execute_next_stage()
 
 	def admitted(self):
 		logEvent("Admit", "User %d, %s: %s" % (self.workload.user_id, self, self.verbose_description()))
@@ -365,35 +367,66 @@ class Resource:
 		return self.name
 
 def concurrency_generator():
-	no_of_concurrent_requests = randint(0, 4)
+	no_of_concurrent_requests = 1
+	#no_of_concurrent_requests = randint(0, 4)     # Total number of concurrent requests fro each user
 	return no_of_concurrent_requests
 
 class MultipleWorker:
 
-	def __init__(self, worker_id, no_of_workers):
-		self.worker_id = worker_id
+	def __init__(self, no_of_workers, no_of_users):
 		self.no_of_workers = no_of_workers
+		self.no_of_users = no_of_users
+		j = 0
+		while j < no_of_users:
+			mappingfunction = MappingFunction(no_of_workers=no_of_workers)
+			modelchecking = mappingfunction._model_checking(mappingfunction, mappingfunction.worker_id, mappingfunction.requested_model_id)
+			workload1 = ClosedLoopWorkload(workload_id=1, worker_id=modelchecking, user_id=j, model_id=mappingfunction.requested_model_id, request_generator=workload1generator, concurrency=concurrency_generator(), admission_control=admissioncontrol)	
+			j = j+1
+
+
+class MappingFunction:
+
+	def __init__(self, no_of_workers):
+		self.requested_model_id = self._model_id_generator()
+		#print("Requested model", self.requested_model_id)
 		for i in range(no_of_workers):
-			rrr = randint(0, 4)
-			#workload1 = ClosedLoopWorkload(workload_id=1, user_id=i, model_id=1, request_generator=workload1generator, concurrency=concurrency_generator(), admission_control=admissioncontrol)
-		#rrr = randint(0, 4)
+			self.model_list = random.sample(range(1, 100), 30)
+			self.worker_id = i
+			#print("Model list and Worker ID", self.model_list, self.worker_id)
+			return_value = self._model_checking(self.model_list, self.worker_id, self.requested_model_id)
+			if return_value > 0:
+				break
+
+	def _model_checking(self, model_list, worker_id, requested_model_id):
+		self.requested_model_id = requested_model_id
+		for i in range(len(self.model_list)):
+			if self.requested_model_id == self.model_list[i]:
+				#print("worker id", worker_id)
+				return worker_id
+				break
+
+	def _model_id_generator(self):
+		self.model_id_generator = random.randrange(1, 100)
+		return self.model_id_generator
 
 class CentralController:
 
-	def __init__(self, ):
-		kkk = randint(0, 4)
+	def __init__(self, no_of_workers, no_of_users):
+		self.no_of_workers = no_of_workers
+		self.no_of_users = no_of_users
+		multipleworker = MultipleWorker(no_of_workers=no_of_workers, no_of_users =no_of_users)
 
-cpu = Resource("cpu", capacity = 1000000, queue = FIFOQueue(), concurrency=100)
-pcie = Resource("pcie", capacity = 1000000, queue = FIFOQueue(), concurrency=100)
-gpu = Resource("gpu", capacity = 1000000, queue = FIFOQueue(), concurrency=100)
+
+cpu = Resource("cpu", capacity = 1000000, queue = FIFOQueue(), concurrency=100)           # CPU resources
+pcie = Resource("pcie", capacity = 1000000, queue = FIFOQueue(), concurrency=100)         # PCIE resources
+gpu = Resource("gpu", capacity = 1000000, queue = FIFOQueue(), concurrency=100)           # GPU resources
+network = Resource("network", capacity = 10000, queue = FIFOQueue(), concurrency=100)     # Network resources
 
 admissionqueue = FIFOQueue()
 admissioncontrol = FixedConcurrencyAdmissionControl(1, admissionqueue)
 
-workload1generator = RequestGenerator().binomial(cpu, 1000, 100).binomial(pcie, 4000, 1000).binomial(gpu, 1000, 200)
-for i in range(10): 
-	multipleworker = MultipleWorker(worker_id=1, no_of_workers=2)
-	workload1 = ClosedLoopWorkload(workload_id=1, user_id=i, model_id=1, request_generator=workload1generator, concurrency=concurrency_generator(), admission_control=admissioncontrol)
+workload1generator = RequestGenerator().binomial(cpu, 1000, 100).binomial(pcie, 4000, 1000).binomial(gpu, 1000, 200).binomial(network, 2000, 500)
+centralcontroller = CentralController(no_of_workers=8, no_of_users=5)
 
-for i in range(10):
+for i in range(40):
 	q.advance()()
