@@ -247,6 +247,28 @@ class ResourceStage:
 
 
 
+class DominatFairQueuing:
+
+	def __init__(self, ):
+		print("Implementation of Dominant Fair Ququeing")
+
+	def __dove_tailing(self):
+		print("Implementation of Dove Tailing")
+
+	def __virtual_time(self):
+		virtual_time = self.request.complete.now()
+		virtaul_finish_time = now()
+		request_id = 0
+		print("self.virtual_time", self.virtual_time)
+		virtual_start_time = max(self.virtual_time, self.virtaul_finish_time)
+		if request_id != 0:
+			virtual_time_function = max()
+		else:
+			virtual_time_function = 0
+		start_time = max(1, 2)
+		print("Implementation of Virtual Time", start_time)
+
+
 
 class RequestGenerator:
 
@@ -367,8 +389,8 @@ class Resource:
 		return self.name
 
 def concurrency_generator():
-	no_of_concurrent_requests = 1
-	#no_of_concurrent_requests = randint(0, 4)     # Total number of concurrent requests fro each user
+	#no_of_concurrent_requests = 1
+	no_of_concurrent_requests = randint(0, 4)     # Total number of concurrent requests from each user
 	return no_of_concurrent_requests
 
 class MultipleWorker:
@@ -415,6 +437,7 @@ class CentralController:
 		self.no_of_workers = no_of_workers
 		self.no_of_users = no_of_users
 		multipleworker = MultipleWorker(no_of_workers=no_of_workers, no_of_users =no_of_users)
+		DominatFairQueuing()
 
 
 cpu = Resource("cpu", capacity = 1000000, queue = FIFOQueue(), concurrency=100)           # CPU resources
@@ -426,7 +449,7 @@ admissionqueue = FIFOQueue()
 admissioncontrol = FixedConcurrencyAdmissionControl(1, admissionqueue)
 
 workload1generator = RequestGenerator().binomial(cpu, 1000, 100).binomial(pcie, 4000, 1000).binomial(gpu, 1000, 200).binomial(network, 2000, 500)
-centralcontroller = CentralController(no_of_workers=8, no_of_users=5)
+centralcontroller = CentralController(no_of_workers=8, no_of_users=10)
 
-for i in range(40):
+for i in range(400):
 	q.advance()()
