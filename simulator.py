@@ -8,16 +8,17 @@ from random import randint
 import array as arr
 import numpy as geek 
 
+# Implementation of event quque
 class EventQueue:
 
 	def __init__(self):
-		self.events = []
+		self.events = []                                                                  # Events associated with each operation for different jobs
 		self.i = 0
 		self.t = 0.0
 
 	def schedule(self, delta_t, priority, callback):
-		delta_t += random.randint(1,8)*0.02 
-		heapq.heappush(self.events, (self.t + delta_t, priority, self.i, callback))
+		delta_t += random.randint(1,8)*0.02                                                # Generate the time required to finish to any operation (i.e., CPU and GPU execution, network transfer and PCIE transfer)
+		heapq.heappush(self.events, (self.t + delta_t, priority, self.i, callback))        # Heap Quque
 		self.i += 1
 
 	def advance(self):
@@ -30,9 +31,11 @@ class EventQueue:
 q = EventQueue()
 random_seed = 1
 
+# Tracking the time stamp of each event
 def now():
 	return q.t
 
+# Calculation of time stamp
 def t_str(t):
 	seconds = int(t)
 	millis = int(t*1000) % 1000
@@ -42,6 +45,7 @@ def t_str(t):
 def print_m(s):
 	__builtins__.print_m("%s - %s" % (t_str(now()).rjust(11), s))
 
+# Print log of each event 
 def logEvent(name, message):
 	print("%s %s" % (name.ljust(15), message))
 
@@ -52,18 +56,18 @@ class Priority:
 	ADMIT_NEXT = 10
 	RESOURCE_EXEC_NEXT = 11
 
-
+# Closed loop workload generator 
 class ClosedLoopWorkload:
 
 	def __init__(self, workload_id, worker_id, user_id, model_id, request_generator, concurrency, admission_control):
-		self.workload_id = workload_id
-		self.user_id = user_id
-		self.model_id = model_id
-		self.worker_id = worker_id
+		self.workload_id = workload_id                                 # Workload ID 
+		self.user_id = user_id                                         # User ID 
+		self.model_id = model_id                                       # Model ID
+		self.worker_id = worker_id                                     # Worker ID
 		self.request_generator = request_generator
 		self.random = RandomState(random_seed + workload_id)
 		self.admission_control = admission_control
-		for i in range(concurrency):
+		for i in range(concurrency):                                   # Generate number of concurrent requets for each user
 			self.start_next_request()
 
 	def start_next_request(self):
@@ -78,10 +82,12 @@ class ClosedLoopWorkload:
 		return "Workload %s" % str(workload_id)
 
 
-
+# Request generator 
 class Request:
 
 	request_id_seed = 0
+	count = 0
+	total_latency = 0
 
 	def __init__(self, workload, admission_control, resource_requirements):
 		self.request_id = Request.request_id_seed
@@ -96,19 +102,19 @@ class Request:
 		self.arrival = None
 		self.completion = None
 
-	def begin(self):
+	def begin(self):                                               # Tacking the arrival of a job
 		self.arrival = now()
 		logEvent("Arrive", "User %d, %s: Worker %s: Model %s: %s" % (self.workload.user_id, self, self.workload.worker_id, self.workload.model_id, self.verbose_description()))
 		self.admission_control.enqueue(self)
 
-	def admitted(self):
+	def admitted(self):                                            # Admitting a job
 		logEvent("Admit", "User %d, %s: %s" % (self.workload.user_id, self, self.verbose_description()))
 		self.execute_next_stage();
 
 	def execute_next_stage(self):
 		self.pending_stages[0].execute()
 
-	def stage_completed(self, stage):
+	def stage_completed(self, stage):                             # Tracking the completion a job
 		self.completed_stages.append(self.pending_stages[0])
 		self.pending_stages = self.pending_stages[1:]
 		if len(self.pending_stages) == 0:
@@ -118,10 +124,17 @@ class Request:
 			self.execute_next_stage()
 
 	def complete(self):
+		Request.count += 1
 		self.completion = now()		
 		lcy = self.completion - self.arrival
 		logEvent("Finish", "User %d, %s.  E2ELatency = %s" % (self.workload.user_id, self, t_str(lcy)))
+		logEvent("Job completed count", Request.count)
+		Request.total_latency = Request.total_latency + lcy
+		logEvent("Total latency", Request.total_latency)
+		average_latency = Request.total_latency/Request.count
+		logEvent("Average latency", average_latency)
 		self.workload.request_completed(self)
+
 
 	def verbose_description(self):
 		return "[%s]" % " > ".join([s.verbose_description() for s in self.pending_stages + self.completed_stages])
@@ -130,6 +143,7 @@ class Request:
 		return "Request %d" % self.request_id
 
 
+# Admission control mechanism 
 class AdmissionControl:
 
 	def __init__(self):
@@ -153,7 +167,7 @@ class NoAdmissionControl(AdmissionControl):
 	def completed(self, request):
 		pass
 
-
+# Fixed concurrent admission control mechanism 
 class FixedConcurrencyAdmissionControl(AdmissionControl):
 
 	def __init__(self, concurrency, queue):
@@ -197,6 +211,7 @@ class Queue:
 	def completed(self, request):
 		pass
 
+# FIFO scheudling mechanism
 class FIFOQueue(Queue):
 
 	def __init__(self):
@@ -215,7 +230,7 @@ class FIFOQueue(Queue):
 		pass
 
 
-
+# Tacking the resource usage of each operation
 class ResourceStage:
 
 	stage_id_seed = 0
@@ -246,11 +261,11 @@ class ResourceStage:
 		return "%s, Task %d" % (self.request, self.stage_ix)
 
 
-
-class DominatFairQueuing:
+# Basic module of Dominant Fair Queuing scheme
+class DominantFairQueuing:
 
 	def __init__(self, ):
-		print("Implementation of Dominant Fair Ququeing")
+		print(" ")
 
 	def __dove_tailing(self):
 		print("Implementation of Dove Tailing")
@@ -269,7 +284,7 @@ class DominatFairQueuing:
 		print("Implementation of Virtual Time", start_time)
 
 
-
+# Request generator
 class RequestGenerator:
 
 	def __init__(self):
@@ -344,6 +359,7 @@ class VirtualTimeConsumptionTracker:
 			q.schedule(delta_t, Priority.RESOURCE_EXEC_COMPLETE, partial(self._check_completions_callback, self.iteration, finish_vt))
 
 
+# Different operations for each event
 class Resource:
 
 	def __init__(self, name, capacity, queue, concurrency):
@@ -354,7 +370,7 @@ class Resource:
 		self.count = 0
 
 
-	def _exec_next(self):
+	def _exec_next(self):                             # Dequeueing a job
 		while self.count < self.concurrency and not self.queue.is_empty():
 			self.count += 1
 			next_execution = self.queue.dequeue()
@@ -370,13 +386,13 @@ class Resource:
 			q.schedule(0, Priority.RESOURCE_EXEC_NEXT, self._exec_next)
 
 
-	def enqueue(self, execution):
+	def enqueue(self, execution):                    # Enqueueing a job
 		execution.enqueue = now()
 		logEvent(self.name.upper(), "Enqueue   %s: %s" % (execution, execution.verbose_description()))
 		self.queue.enqueue(execution)
 		self._schedule_exec_next()
 
-	def _on_execution_completed(self, execution):
+	def _on_execution_completed(self, execution):    # Execution of a job
 		self.count -= 1
 		execution.completion = now()
 		etime = execution.completion - execution.dequeue
@@ -388,11 +404,14 @@ class Resource:
 	def __str__(self):
 		return self.name
 
+# Module to generate the concurrent requests of a user
 def concurrency_generator():
 	#no_of_concurrent_requests = 1
 	no_of_concurrent_requests = randint(0, 4)     # Total number of concurrent requests from each user
 	return no_of_concurrent_requests
 
+
+# Module to genrate multiple workers
 class MultipleWorker:
 
 	def __init__(self, no_of_workers, no_of_users):
@@ -405,7 +424,7 @@ class MultipleWorker:
 			workload1 = ClosedLoopWorkload(workload_id=1, worker_id=modelchecking, user_id=j, model_id=mappingfunction.requested_model_id, request_generator=workload1generator, concurrency=concurrency_generator(), admission_control=admissioncontrol)	
 			j = j+1
 
-
+# Basic job placement algorithm based on the modeles available in each worker
 class MappingFunction:
 
 	def __init__(self, no_of_workers):
@@ -431,6 +450,7 @@ class MappingFunction:
 		self.model_id_generator = random.randrange(1, 100)
 		return self.model_id_generator
 
+# Module for cental controller
 class CentralController:
 
 	def __init__(self, no_of_workers, no_of_users):
@@ -448,8 +468,10 @@ network = Resource("network", capacity = 10000, queue = FIFOQueue(), concurrency
 admissionqueue = FIFOQueue()
 admissioncontrol = FixedConcurrencyAdmissionControl(1, admissionqueue)
 
-workload1generator = RequestGenerator().binomial(cpu, 1000, 100).binomial(pcie, 4000, 1000).binomial(gpu, 1000, 200).binomial(network, 2000, 500)
-centralcontroller = CentralController(no_of_workers=8, no_of_users=10)
+workload1generator = RequestGenerator().binomial(cpu, 1000, 100).binomial(pcie, 4000, 1000).binomial(gpu, 1000, 200).binomial(network, 2000, 500) # Workload generator
+centralcontroller = CentralController(no_of_workers=8, no_of_users=10) # Central controller with 8 workers and 10 users
 
-for i in range(400):
+total_time = 200 # Time-frame 
+
+for i in range(total_time):
 	q.advance()()
